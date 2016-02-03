@@ -1,0 +1,2 @@
+C:\Users\whhender\Documents\Visual Studio 2013\Projects\AzureResourceGroup3\AzureResourceGroup3\bin\Debug\Scripts\Deploy-AzureResourceGroup.ps1
+C:\Users\whhender\Documents\Visual Studio 2013\Projects\AzureResourceGroup3\AzureResourceGroup3\bin\Debug\Templates\DeploymentTemplate.json

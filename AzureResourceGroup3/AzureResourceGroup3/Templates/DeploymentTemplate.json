@@ -1,0 +1,160 @@
+﻿{
+    "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "location": {
+            "type": "string"
+        },
+        "newtestvirtualmachineName": {
+            "type": "string",
+            "minLength": 1
+        },
+        "newtestvirtualmachineAdminUserName": {
+            "type": "string",
+            "minLength": 1
+        },
+        "newtestvirtualmachineAdminPassword": {
+            "type": "securestring"
+        },
+        "newtestvirtualmachineWindowsOSVersion": {
+            "type": "string",
+            "defaultValue": "2012-R2-Datacenter",
+            "allowedValues": [
+                "2008-R2-SP1",
+                "2012-Datacenter",
+                "2012-R2-Datacenter",
+                "Windows-Server-Technical-Preview"
+            ]
+        }
+    },
+    "variables": {
+        "newTestVnetPrefix": "10.0.0.0/16",
+        "newTestVnetSubnet1Name": "Subnet-1",
+        "newTestVnetSubnet1Prefix": "10.0.0.0/24",
+        "newTestVnetSubnet2Name": "Subnet-2",
+        "newTestVnetSubnet2Prefix": "10.0.1.0/24",
+        "newtestvirtualmachineImagePublisher": "MicrosoftWindowsServer",
+        "newtestvirtualmachineImageOffer": "WindowsServer",
+        "newtestvirtualmachineOSDiskName": "newtestvirtualmachineOSDisk",
+        "newtestvirtualmachineVmSize": "Standard_D1",
+        "newtestvirtualmachineVnetID": "[resourceId('Microsoft.Network/virtualNetworks', 'newTestVnet')]",
+        "newtestvirtualmachineSubnetRef": "[concat(variables('newtestvirtualmachineVnetID'), '/subnets/', variables('newTestVnetSubnet1Name'))]",
+        "newtestvirtualmachineStorageAccountContainerName": "vhds",
+        "newtestvirtualmachineNicName": "[concat(parameters('newtestvirtualmachineName'), 'NetworkInterface')]"
+    },
+    "resources": [
+        {
+            "apiVersion": "2015-06-15",
+            "type": "Microsoft.Storage/storageAccounts",
+            "name": "newteststoracct",
+            "location": "[parameters('location')]",
+            "properties": { 
+                "accountType": "standard_RAGRS"
+            }
+        },
+        {
+            "name": "newTestVnet",
+            "type": "Microsoft.Network/virtualNetworks",
+            "location": "[resourceGroup().location]",
+            "apiVersion": "2015-06-15",
+            "dependsOn": [ ],
+            "tags": {
+                "displayName": "newTestVnet"
+            },
+            "properties": {
+                "addressSpace": {
+                    "addressPrefixes": [
+                        "[variables('newTestVnetPrefix')]"
+                    ]
+                },
+                "subnets": [
+                    {
+                        "name": "[variables('newTestVnetSubnet1Name')]",
+                        "properties": {
+                            "addressPrefix": "[variables('newTestVnetSubnet1Prefix')]"
+                        }
+                    },
+                    {
+                        "name": "[variables('newTestVnetSubnet2Name')]",
+                        "properties": {
+                            "addressPrefix": "[variables('newTestVnetSubnet2Prefix')]"
+                        }
+                    }
+                ]
+            }
+        },
+        {
+            "name": "[variables('newtestvirtualmachineNicName')]",
+            "type": "Microsoft.Network/networkInterfaces",
+            "location": "[resourceGroup().location]",
+            "apiVersion": "2015-06-15",
+            "dependsOn": [
+                "[concat('Microsoft.Network/virtualNetworks/', 'newTestVnet')]"
+            ],
+            "tags": {
+                "displayName": "newtestvirtualmachineNic"
+            },
+            "properties": {
+                "ipConfigurations": [
+                    {
+                        "name": "ipconfig1",
+                        "properties": {
+                            "privateIPAllocationMethod": "Dynamic",
+                            "subnet": {
+                                "id": "[variables('newtestvirtualmachineSubnetRef')]"
+                            }
+                        }
+                    }
+                ]
+            }
+        },
+        {
+            "name": "[parameters('newtestvirtualmachineName')]",
+            "type": "Microsoft.Compute/virtualMachines",
+            "location": "[resourceGroup().location]",
+            "apiVersion": "2015-06-15",
+            "dependsOn": [
+                "[concat('Microsoft.Storage/storageAccounts/', 'newteststoracct')]",
+                "[concat('Microsoft.Network/networkInterfaces/', variables('newtestvirtualmachineNicName'))]"
+            ],
+            "tags": {
+                "displayName": "newtestvirtualmachine"
+            },
+            "properties": {
+                "hardwareProfile": {
+                    "vmSize": "[variables('newtestvirtualmachineVmSize')]"
+                },
+                "osProfile": {
+                    "computerName": "[parameters('newtestvirtualmachineName')]",
+                    "adminUsername": "[parameters('newtestvirtualmachineAdminUsername')]",
+                    "adminPassword": "[parameters('newtestvirtualmachineAdminPassword')]"
+                },
+                "storageProfile": {
+                    "imageReference": {
+                        "publisher": "[variables('newtestvirtualmachineImagePublisher')]",
+                        "offer": "[variables('newtestvirtualmachineImageOffer')]",
+                        "sku": "[parameters('newtestvirtualmachineWindowsOSVersion')]",
+                        "version": "latest"
+                    },
+                    "osDisk": {
+                        "name": "newtestvirtualmachineOSDisk",
+                        "vhd": {
+                            "uri": "[concat('http://', 'newteststoracct', '.blob.core.windows.net/', variables('newtestvirtualmachineStorageAccountContainerName'), '/', variables('newtestvirtualmachineOSDiskName'), '.vhd')]"
+                        },
+                        "caching": "ReadWrite",
+                        "createOption": "FromImage"
+                    }
+                },
+                "networkProfile": {
+                    "networkInterfaces": [
+                        {
+                            "id": "[resourceId('Microsoft.Network/networkInterfaces', variables('newtestvirtualmachineNicName'))]"
+                        }
+                    ]
+                }
+            }
+        }
+    ],
+    "outputs": {
+    }
+}
